@@ -1,7 +1,0 @@
-# Exclude all but c, h, H, hex, gitignore files
-*
-!*.h
-!*.H
-!*.c
-!*.hex
-!.gitignore

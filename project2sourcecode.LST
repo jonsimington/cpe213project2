@@ -1,0 +1,47 @@
+C51 COMPILER V8.18   PROJECT2SOURCECODE                                                    04/21/2014 22:39:12 PAGE 1   
+
+
+C51 COMPILER V8.18, COMPILATION OF MODULE PROJECT2SOURCECODE
+OBJECT MODULE PLACED IN project2sourcecode.OBJ
+COMPILER INVOKED BY: C:\Keil8051\C51\BIN\C51.EXE project2sourcecode.c BROWSE DEBUG OBJECTEXTEND
+
+line level    source
+
+   1          #include <reg932.h>
+   2          #include <stdlib.h>
+   3          #include <project2.h>
+   4          
+   5          
+   6          // main driver function
+   7          void main()
+   8          {
+   9   1              
+  10   1                      
+  11   1              P0M1 = 0x00;
+  12   1              P1M1 = 0x00;
+  13   1              P2M1 = 0x00;
+  14   1              
+  15   1              // timer for random sequence    
+  16   1              TMOD = 0x02; //timer0, 8bit mode
+  17   1              TH0 = 0x01;      //inital value of TH0
+  18   1              TR0 = 1;         //turn timer on
+  19   1      
+  20   1              while(1)
+  21   1              {
+  22   2                      simon();
+  23   2              }
+  24   1      }
+
+
+MODULE INFORMATION:   STATIC OVERLAYABLE
+   CODE SIZE        =    907    ----
+   CONSTANT SIZE    =   ----    ----
+   XDATA SIZE       =   ----    ----
+   PDATA SIZE       =   ----    ----
+   DATA SIZE        =     26    ----
+   IDATA SIZE       =   ----    ----
+   BIT SIZE         =   ----    ----
+END OF MODULE INFORMATION.
+
+
+C51 COMPILATION COMPLETE.  0 WARNING(S),  0 ERROR(S)
