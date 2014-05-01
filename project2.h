@@ -1,21 +1,29 @@
-//Global Variable
-char EASY = 1;  //1 = EASY
-unsigned int SEQ_SIZE = 15;
+#include <uart.h>
+#include <stdlib.h>
 
+//Global Variables
+char EASY = 1;  //1 = EASY
+unsigned int SEQ_SIZE = 2;
 unsigned char seed;
 unsigned char random_num;
 unsigned char k;
 unsigned char intro[17] = "Simon Board Game";
 unsigned char displaydiff[5];
 unsigned char arraylength = 0;
-
-unsigned char SEQUENCE[15]; // array of LEDs
+unsigned char SEQUENCE[5]; // array of LEDs
 unsigned char counter = 0;	// counter used to iterate through sequence
 unsigned char button_pressed = 0;	// flag to represent if a button is pressed
 unsigned char i, j;	// loop counters
 unsigned char input_match; // set to true when the user presses the correct button
+unsigned char high_score = 0;
 
-static bit mtxbusy;
+//Ports used to display score on 7-segment display
+sbit ss_A = P0^2;
+sbit ss_B = P1^2;
+sbit ss_C = P1^3;
+sbit ss_D = P2^1;
+
+//static bit mtxbusy;
 
 // Bottom LEDs
 sbit BOT_YEL_LED = P2^5;
@@ -62,10 +70,10 @@ void E2(int time);
 void F2(int time);
 void gameover();
 void gamelosesound();
+void gamewinsound();
 void generatesequence();
 void simon();
-void uart_init();
-//void uart_transmit(char c);
+void display_score(char score);
 
 // This function checks to see if the user pressed the button which corresponds
 // to the current color in the sequence
@@ -188,6 +196,8 @@ void flash_bot_leds()
 // plays a sound when the user loses the game
 void gameover()
 {
+	delay(500);
+
     if(counter == SEQ_SIZE) //Checking for win condition
     {
       //game winning tune
@@ -203,8 +213,6 @@ void gameover()
 	flash_bot_leds();
 	delay(100);
 	flash_bot_leds();
-
-	// make gameover tune
 
 	// reset counter upon losing the game
    	counter = 0;
@@ -240,11 +248,15 @@ void generatesequence()
 // This function plays the simon says game
 void simon()
 {
-   	//C1(100);
+	//display current highscore
+	display_score(high_score);
+
 	// wait until user presses start button
 	arraylength = 16;
-	//uart_transmit(intro);
-	//C1(1000);
+	for(i = 0; i < arraylength; i++)
+	{
+	  //uart_transmit(intro[i]);
+	}
 
 	while(START_BUTTON)
 	{
@@ -255,7 +267,6 @@ void simon()
 		while(!DIFFICULTY_BUTTON){}
 	  }
 	}
-	//C1(100);
 
 	if(EASY == 1)
 	{
@@ -271,18 +282,23 @@ void simon()
 	  displaydiff[2] = 'r';
 	  displaydiff[3] = 'd';
 	}
+	arraylength = 4;
 
-	//C1(500);
+	for(i = 0; i < arraylength; i++)
+	{
+	  //uart_transmit(displaydiff[i]);
+	}
 
 	BOT_GRN_LED = 1;
 
 	arraylength = 4;
-	//uart_transmit(displaydiff);
 
 	generatesequence(); //generates random sequence
 
 	while(1)
 	{
+		display_score(counter);		
+
 		delay(250);
 		// play sequence up to counter
 		play_sequence();
@@ -371,7 +387,9 @@ void simon()
 			if(counter == SEQ_SIZE)
 			{
 				//win condition
-				//play different tune than gameover
+				gamewinsound();
+				display_score(counter);
+				high_score = counter;
 				gameover();
 				return;
 			}
@@ -379,6 +397,12 @@ void simon()
 		// user didn't match the sequence at some point, gameover
 		else
 		{
+			//update high_score variable if appropriate
+			if(counter > high_score)
+			{
+				high_score = counter;
+			}			
+
 			gameover();
 			return;
 		}
@@ -513,6 +537,22 @@ void F2(int time)
   }
 }
 
+void GSharp2(int time)
+{
+  int i;
+  TMOD = 0x10;
+  for(i=0; i < time; i++)
+  {
+    TH1 = -1387 >> 8;
+    TL1 = -1387;
+    TR1 = 1;
+    while(!TF1);
+    TR1 = 0;
+    TF1 = 0;
+	SPEAKER = !SPEAKER;
+  }
+}
+
 void gamelosesound()
 {
   B1(180);
@@ -538,52 +578,58 @@ void gamelosesound()
   C1(100);
 }
 
-void uart_init()
+void gamewinsound()
 {
-  // configure UART
-  // clear SMOD0
-  PCON &= ~0x40;
-  SCON = 0x50;
-
-  // set or clear SMOD1
-  PCON &= 0x7F;
-  PCON |= (0 << 8);
-  SSTAT = 0x00;
-
-  // enable break detect
-  AUXR1 |= 0x40;
-
-  // configure baud rate generator
-  BRGCON = 0x00;
-  BRGR0 = 0xF0;
-  BRGR1 = 0x02;
-  BRGCON = 0x03;
-
-  // TxD = push-pull, RxD = input
-//  P1M1 = 0x02;
- // P1M2 = 0x01;
- 
-  // initially not busy
-  mtxbusy = 0;
-
-  // set isr priority to 0
-  IP0 &= 0xF7;
-  IP0 |= 0x08;
-  IP0H &= 0xF7;
-  IP0H |= 0x08; 
-  
-  // enable uart interrupt
-  ES = 1;
-  EA = 1;
-
+  G1(150);
+  delay(38);
+  C1(100);
+  delay(75);
+  E1(121);
+  delay(75);
+  GSharp2(300);
+  delay(75);
+  G1(150);
+  delay(75);
+  C1(100); 
+  delay(75);
+  E1(121);
+  delay(75);
+  G1(300);
 }
 
-void uart_transmit(char c[])
+void display_score(char score)
 {
-  char z;
-  while(mtxbusy);
-  mtxbusy = 1;
- 
-  for(z = 0; z < arraylength; z++) 
-    SBUF = c[z];
-} 
+	switch(score)
+	{
+		case 0:
+			ss_A = 0; ss_B = 0; ss_C = 0; ss_D = 0;
+			break;
+		case 1:
+			ss_A = 1; ss_B = 0; ss_C = 0; ss_D = 0;
+			break;
+		case 2:
+			ss_A = 0; ss_B = 1; ss_C = 0; ss_D = 0;
+			break;
+		case 3:
+			ss_A = 1; ss_B = 1; ss_C = 0; ss_D = 0;
+			break;
+		case 4:
+			ss_A = 0; ss_B = 0; ss_C = 1; ss_D = 0;
+			break;
+		case 5:
+			ss_A = 1; ss_B = 0; ss_C = 1; ss_D = 0;
+			break;
+		case 6:
+			ss_A = 0; ss_B = 1; ss_C = 1; ss_D = 0;
+			break;
+		case 7:
+			ss_A = 1; ss_B = 1; ss_C = 1; ss_D = 0;
+			break;
+		case 8:
+			ss_A = 0; ss_B = 0; ss_C = 0; ss_D = 1;
+			break;
+		case 9:
+			ss_A = 1; ss_B = 0; ss_C = 0; ss_D = 1;
+			break;
+	}
+}
